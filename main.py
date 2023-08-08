@@ -7,6 +7,7 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import subprocess
 import re
+from mautrix.types import PaginationDirection
 
 async def loginToMatrix(matrix, roomToBridge, userId):
     await matrix.whoami()
@@ -47,10 +48,20 @@ async def main():
     print("[Info] Monitoring", monitorFile)
 
     lastLine = None
+    matrixLastMessageStore = None  # Initialize the storage variable
 
     while True:
         tail_command = f"tail -n 1 {monitorFile} | grep Chat"
         newLine = subprocess.getoutput(tail_command).strip()
+        paginated_messages = await matrix.get_messages(roomToBridge, direction=PaginationDirection.BACKWARD, limit=1)
+        if paginated_messages.events:
+            matrixLastMessage = paginated_messages.events[0].content.body
+
+            if matrixLastMessageStore is None:
+                matrixLastMessageStore = matrixLastMessage  # Store the first message
+            elif matrixLastMessage != matrixLastMessageStore:
+                matrixLastMessageStore = matrixLastMessage
+                print("New message from Matrix:", matrixLastMessage)
 
         if newLine:
             if newLine != lastLine:
@@ -61,7 +72,6 @@ async def main():
                 await sendMatrixMessage(message, roomToBridge, matrix)
 
         await asyncio.sleep(1)
-
 
 if __name__ == "__main__":
     asyncio.run(main())
