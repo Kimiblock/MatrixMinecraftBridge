@@ -11,6 +11,7 @@ import re
 from mautrix.types import PaginationDirection
 from mcipc.rcon.je import Biome, Client
 import mcipc
+import datetime
 
 async def loginToMatrix(matrix, roomToBridge, userId):
     await matrix.whoami()
@@ -43,16 +44,17 @@ async def main():
     rconIp = configData["rconAddress"]
     rconPort = configData["rconPort"]
     rconSecret = configData["rconSecret"]
+    unit = configData["serverUnit"]
 
     await loginToMatrix(matrix, roomToBridge, userId)
-    monitorFile = os.path.join(mcPath, "logs", "latest.log")
-    print("[Info] Monitoring", monitorFile)
+    
+    print("[Info] Monitoring")
 
     lastLine = None
     matrixLastMessageStore = None  # Initialize the storage variable
 
     while True:
-        tail_command = f"tail -n 1 {monitorFile} | grep Chat"
+        tail_command = "journalctl -eu " + unit + " | tail -n 1"
         newLine = subprocess.getoutput(tail_command).strip()
         paginated_messages = await matrix.get_messages(roomToBridge, direction=PaginationDirection.BACKWARD, limit=1)
         if paginated_messages.events:
@@ -68,8 +70,6 @@ async def main():
                 else:
                     messagePending = "[Matrix]: " + matrixLastMessage
                     print("Attempting to send message:", messagePending)
-                    #mcSend = mcipc.rcon.je.Client(host=rconPort, port=rconPort, passwd=rconSecret)
-                    #sendToMinecraft = mcSend.say(messagePending)
                     with Client(rconIp, rconPort, passwd=rconSecret) as client:
                         listPlayer = client.list(uuids=False)
 
@@ -86,14 +86,16 @@ async def main():
                 lastLine = newLine
             if newLine != lastLine:
                 lastLine = newLine
-                print("[Info] Found 'Chat' line:", lastLine)
+                print("[Info] Found Chat:", lastLine)
                 if "[Matrix]" in newLine:
                     print("Seems that this message is from Matrix")
                 else:
-                    message = re.sub(r'^\[\d{2}:\d{2}:\d{2}\] \[.*\]: \[Not Secure\] ', '', lastLine)
-                    messagePrefixed = "[Minecraft]: " + message
-                    print("Attempting to send", message)
-                    await sendMatrixMessage(messagePrefixed, roomToBridge, matrix)
+                    if "<" in newLine:
+                        print("Detected player message")
+                        message = lastLine
+                        messagePrefixed = "[Minecraft]: " + message
+                        print("Attempting to send", message)
+                        await sendMatrixMessage(messagePrefixed, roomToBridge, matrix)
 
         await asyncio.sleep(0.6)
 
