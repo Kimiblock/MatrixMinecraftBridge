@@ -1,0 +1,18 @@
+[Unit]
+After=network-online.target
+Description=serverOS Matrix Minecraft Bridge
+
+[Service]
+Type=simple
+User=serveros-bash
+ExecStart=python /opt/MatrixMinecraftBridge/main.py
+WorkingDirectory=/opt/MatrixMinecraftBridge
+TimeoutStartSec=120
+TimeoutStopSec=10
+Restart=always
+OOMPolicy=continue
+RestartSec=100ms
+
+[Install]
+WantedBy=multi-user.target
+
