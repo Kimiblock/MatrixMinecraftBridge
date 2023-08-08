@@ -54,7 +54,7 @@ async def main():
     matrixLastMessageStore = None  # Initialize the storage variable
 
     while True:
-        tail_command = "journalctl -eu " + unit + " | tail -n 1"
+        tail_command = "journalctl -eu" + unit + " -n 1 | tail -n 1"
         newLine = subprocess.getoutput(tail_command).strip()
         paginated_messages = await matrix.get_messages(roomToBridge, direction=PaginationDirection.BACKWARD, limit=1)
         if paginated_messages.events:
