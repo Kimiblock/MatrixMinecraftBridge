@@ -8,6 +8,8 @@ from watchdog.events import FileSystemEventHandler
 import subprocess
 import re
 from mautrix.types import PaginationDirection
+from mcipc.rcon.je import Biome, Client
+import mcipc
 
 async def loginToMatrix(matrix, roomToBridge, userId):
     await matrix.whoami()
@@ -27,13 +29,6 @@ async def sendMatrixMessage(message, roomToBridge, matrix):
     await matrix.send_message(roomToBridge, messageDict)
 
 async def main():
-    if "serverPath" in os.environ:
-        mcPath = os.environ["serverPath"]
-        print("serverPath identified @", mcPath)
-    else:
-        print("Did you set serverPath?")
-        os.abort()
-
     with open("config.yaml", 'r') as config_file:
         configData = yaml.safe_load(config_file)
 
@@ -42,6 +37,11 @@ async def main():
     baseUrl = configData["base_url"]
     roomToBridge = configData["roomToBridge"]
     matrix = ClientAPI(userId, base_url=baseUrl, token=matrixToken)
+    mcPath = configData["serverPath"]
+    matrix = ClientAPI(userId, base_url=baseUrl, token=matrixToken)
+    rconIp = configData["rconAddress"]
+    rconPort = configData["rconPort"]
+    rconSecret = configData["rconSecret"]
 
     await loginToMatrix(matrix, roomToBridge, userId)
     monitorFile = os.path.join(mcPath, "logs", "latest.log")
@@ -61,7 +61,24 @@ async def main():
                 matrixLastMessageStore = matrixLastMessage  # Store the first message
             elif matrixLastMessage != matrixLastMessageStore:
                 matrixLastMessageStore = matrixLastMessage
-                print("New message from Matrix:", matrixLastMessage)
+                print("[Info] New message from Matrix:", matrixLastMessage)
+                if "[Minecraft]" in matrixLastMessage:
+                    print("Looks like this message is from Minecraft")
+                else:
+                    messagePending = "[Matrix]: " + matrixLastMessage
+                    print("Attempting to send message:", messagePending)
+                    #mcSend = mcipc.rcon.je.Client(host=rconPort, port=rconPort, passwd=rconSecret)
+                    #sendToMinecraft = mcSend.say(messagePending)
+                    with Client(rconIp, rconPort, passwd=rconSecret) as client:
+                        listPlayer = client.list(uuids=False)
+
+                    if "online=0" in str(listPlayer):
+                        print("[Info] Oops! There isn't anyone on the server!")
+                    else:
+                        with Client(rconIp, rconPort, passwd=rconSecret) as client:
+                            say = client.tell(player="@a", message=messagePending)
+
+                        print(say)
 
         if newLine:
             if lastLine == None:
@@ -69,9 +86,13 @@ async def main():
             if newLine != lastLine:
                 lastLine = newLine
                 print("[Info] Found 'Chat' line:", lastLine)
-                message = re.sub(r'^\[\d{2}:\d{2}:\d{2}\] \[.*\]: \[Not Secure\] ', '', lastLine)
-                print("Attempting to send", message)
-                await sendMatrixMessage(message, roomToBridge, matrix)
+                if "[Matrix]" in newLine:
+                    print("Seems that this message is from Matrix")
+                else:
+                    message = re.sub(r'^\[\d{2}:\d{2}:\d{2}\] \[.*\]: \[Not Secure\] ', '', lastLine)
+                    messagePrefixed = "[Minecraft]: " + message
+                    print("Attempting to send", message)
+                    await sendMatrixMessage(messagePrefixed, roomToBridge, matrix)
 
         await asyncio.sleep(0.6)
 

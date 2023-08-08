@@ -2,3 +2,7 @@ user:
 token:
 base_url:
 roomToBridge:
+rconAddress:
+rconPort:
+rconSecret:
+serverPath:
