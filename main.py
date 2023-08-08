@@ -64,6 +64,8 @@ async def main():
                 print("New message from Matrix:", matrixLastMessage)
 
         if newLine:
+            if lastLine == None:
+                lastLine = newLine
             if newLine != lastLine:
                 lastLine = newLine
                 print("[Info] Found 'Chat' line:", lastLine)
@@ -71,7 +73,7 @@ async def main():
                 print("Attempting to send", message)
                 await sendMatrixMessage(message, roomToBridge, matrix)
 
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.6)
 
 if __name__ == "__main__":
     asyncio.run(main())
