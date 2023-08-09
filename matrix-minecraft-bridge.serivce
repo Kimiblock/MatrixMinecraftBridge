@@ -5,6 +5,7 @@ Description=serverOS Matrix Minecraft Bridge
 [Service]
 Type=simple
 User=serveros-bash
+Group=systemd-journal
 ExecStart=python /opt/MatrixMinecraftBridge/main.py
 WorkingDirectory=/opt/MatrixMinecraftBridge
 TimeoutStartSec=120
