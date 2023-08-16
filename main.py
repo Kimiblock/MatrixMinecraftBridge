@@ -91,13 +91,25 @@ async def main():
                     print("Seems that this message is from Matrix")
                 else:
                     if "<" in newLine:
-                        print("Detected player message")
-                        message = lastLine
-                        messagePrefixed = "[Minecraft]: " + message
-                        print("Attempting to send", message)
-                        await sendMatrixMessage(messagePrefixed, roomToBridge, matrix)
+                        filterMessage = r'\w{3}\s\d{1,2}\s\d{2}:\d{2}:\d{2}\s\w+\-\w+\.\w+\sjava\[\d+\]'
+                        if ",name=cuute," in lastLine:
+                            print("Shitty spammer again. Ignoring")
+                            print("https://docs.google.com/spreadsheets/d/1AeNtPHAKepa8OPTfcHSeX9ltAFCTWCHqGrcZ_Abb30c/edit#gid=0")
+                        else:
 
-        await asyncio.sleep(0.6)
+                            match = re.search(filterMessage, lastLine)
+                            if match:
+                                print("Detected player message")
+                                message = lastLine.replace(match.group(), '')
+                                messagePrefixed = "[Minecraft] " + message
+                                print("Attempting to send", message)
+                                await sendMatrixMessage(messagePrefixed, roomToBridge, matrix)
+
+                            else:
+                                print("No Match")
+
+
+        await asyncio.sleep(0.8)
 
 if __name__ == "__main__":
     asyncio.run(main())
