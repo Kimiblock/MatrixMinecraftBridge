@@ -10,9 +10,9 @@ ExecStart=python /opt/MatrixMinecraftBridge/main.py
 WorkingDirectory=/opt/MatrixMinecraftBridge
 TimeoutStartSec=120
 TimeoutStopSec=10
-Restart=always
+RestartSec=0
+Restart=on-failure
 OOMPolicy=continue
-RestartSec=100ms
 
 [Install]
 WantedBy=multi-user.target
